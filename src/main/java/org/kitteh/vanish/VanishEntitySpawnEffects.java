@@ -76,7 +76,7 @@ public class VanishEntitySpawnEffects {
         this.plugin = plugin;
         this.entityCause = Cause.source(SpawnCause.builder().type(SpawnTypes.PLUGIN).build())
                 .owner(this.plugin).build();
-        this.effect = ParticleEffect.builder().type(ParticleTypes.SMOKE_LARGE).count(1).build();
+        this.effect = ParticleEffect.builder().type(ParticleTypes.LARGE_SMOKE).quantity(1).build();
 
         // Set up permissions/entities map.
         this.permEntityMap.put(Vanish.PERMISSION_EFFECTS_BATS, EntityTypes.BAT);
@@ -99,26 +99,24 @@ public class VanishEntitySpawnEffects {
         for (String permission : this.permEntityMap.keySet()) {
             if (player.hasPermission(permission)) {
                 for (int i = 0; i < NUM_ENTITIES; i++) {
-                    location.getExtent().createEntity(this.permEntityMap.get(permission), location.getPosition())
-                            .ifPresent(entity -> {
-                                ourEntities.add(entity);
-                                this.allEntities.add(entity);
-                                location.getExtent().spawnEntity(entity, this.entityCause);
-
-                                // Entities should be invulnerable for the duration of time that they'll be alive.
-                                entity.offer(Keys.INVULNERABILITY_TICKS, LIFE_TICKS);
-
-                                // Entities should despawn if players move far enough away.
-                                entity.offer(Keys.PERSISTS, false);
-                            });
+                    try {
+                        Entity entity = location.getExtent().createEntity(this.permEntityMap.get(permission), location.getPosition());
+                        ourEntities.add(entity);
+                        this.allEntities.add(entity);
+                        location.getExtent().spawnEntity(entity, this.entityCause);
+                        // Entities should be invulnerable for the duration of time that they'll be alive.
+                        entity.offer(Keys.INVULNERABILITY_TICKS, LIFE_TICKS);
+                        // Entities should despawn if players move far enough away.
+                        entity.offer(Keys.PERSISTS, false);
+                    } catch (IllegalArgumentException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         }
 
         // Schedule cleanup for later.
-        Sponge.getScheduler().createTaskBuilder().delayTicks(LIFE_TICKS).execute(() -> {
-            this.removeEntities(ourEntities);
-        }).submit(this.plugin);
+        Sponge.getScheduler().createTaskBuilder().delayTicks(LIFE_TICKS).execute(() -> this.removeEntities(ourEntities)).submit(this.plugin);
     }
 
     @Listener
